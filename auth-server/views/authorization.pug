@@ -1,0 +1,9 @@
+extends layout
+
+block content
+  h1= title
+  p Welcome to the #{title} page! Please insert the authorization code.
+  form(action="/authorize", method="post")
+    input(type="text", name="code", id="code")
+    br
+    input(type="submit", value="Authorize")
