@@ -108,7 +108,6 @@ CURLcode postServer(char *user, char *owner, char *operation, char *target, char
 
     data.data[0] = '\0';
 
-
 	CURL *curl;
 	CURLcode res;
 
@@ -118,8 +117,7 @@ CURLcode postServer(char *user, char *owner, char *operation, char *target, char
 		sprintf(params, "user=%s&owner=%s&operation=%s&target=%s", user, owner, operation, target);
 		
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, params);
-		curl_easy_setopt(curl, CURLOPT_URL, "https://example.com");
-		//curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:3000/access/");
+		curl_easy_setopt(curl, CURLOPT_URL, "http://localhost:3000/access/");
 	
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
@@ -133,18 +131,21 @@ CURLcode postServer(char *user, char *owner, char *operation, char *target, char
 	}
   	curl_global_cleanup();
 
+	free(data.data);
+
 	if(NULL == *code)
 		return -1;
-	
+
 	return res;
 }
 
 
 CURLcode getServer(char *code, char **answer)
 {	
+
 	struct url_data data;
     data.size = 0;
-    data.data = (char *)malloc(sizeof(char)*16);
+    data.data = (char *)malloc(sizeof(char)*4096); //(char *)malloc(sizeof(char)*16);
     if(NULL == data.data)
         return -1;
 
@@ -152,7 +153,7 @@ CURLcode getServer(char *code, char **answer)
 
 	CURL *curl;
 	CURLcode res;
-	char url[1024];
+	char *url = (char *)malloc(sizeof(char)*1024);
 	sprintf(url,"http://localhost:3000/access/%s",code); 
 
 	curl = curl_easy_init();
@@ -171,12 +172,91 @@ CURLcode getServer(char *code, char **answer)
 	}
   	curl_global_cleanup();
 
+	free(url);
+	free(data.data);
+
 	if(NULL == code)
 		return -1;
 
 	return res;
 }
 
+int verifyAction(const char *path, char *operation)
+{
+
+	struct fuse_context * context = fuse_get_context();
+	unsigned int userId = context->uid;
+
+	char *command = (char *)malloc(sizeof(char)*24);
+	sprintf(command, "id -nu %i", userId);
+
+	char *user = (char *)malloc(sizeof(char)*12);
+	FILE *idFile = popen(command, "r");
+	fscanf(idFile, "%s", user);
+	fclose(idFile);
+	free(command);
+	
+	struct stat sb;
+    stat(path, &sb);
+    struct passwd *owner = getpwuid(sb.st_uid);
+
+	FILE * fp;
+    fp = fopen("/home/lpbf/Desktop/TP3/logs.txt", "a");
+    fprintf(fp, "User %5i:%8s tring to open %20s from user %6i:%8s\n", userId, user, path, owner->pw_uid, owner->pw_name);
+	fclose(fp);
+    
+	char *answer = NULL;
+
+	//If it is not the owner of the file ask for permission
+	if(strcmp(owner->pw_name,user))
+	{
+		char *code;
+		CURLcode postRes;
+
+		//Send message to Server
+		if((postRes = postServer(user, owner->pw_name, operation, (char *)path, &code)) == CURLE_OK)
+		{
+
+			CURLcode getRes = getServer(code, &answer);
+
+			if(getRes == CURLE_OPERATION_TIMEDOUT)
+			{
+				fprintf(stderr, "Permission denied! (timeout)\n");
+				return -1;
+			}
+			else if(getRes == -1)
+			{
+				fprintf(stderr, "Failed to allocate memory. (getServer)\n");
+				return -2;				
+			}
+			else if(getRes != CURLE_OK)
+			{
+				fprintf(stderr, "Permission denied! (Server disconnected)\n");
+				return -3;
+			}
+
+		}
+		else
+		{
+			if(postRes == -1)
+				fprintf(stderr, "Failed to allocate memory. (postServer)\n");
+			else
+				fprintf(stderr, "Permission denied! (No server response)\n");
+			return -4;
+		}
+	}
+	if(!strcmp(answer,"false"))
+	{
+		free(answer);
+		return -5;
+	}
+		
+	
+	free(answer);
+	free(user);
+
+	return 0;
+}
 
 
 
@@ -415,55 +495,10 @@ static int xmp_create(const char *path, mode_t mode,
 	return 0;
 }
 
+
 static int xmp_open(const char *path, struct fuse_file_info *fi)
 {
-
-	char *user = getlogin();
-
-	struct stat sb;
-    stat(path, &sb);
-    struct passwd *owner = getpwuid(sb.st_uid); //Check if return isnt an error
-
-	char *answer;
-
-	//If it is not the owner of the file ask for permission
-	if(!strcmp(owner->pw_name,user))
-	{
-		char *code;
-		CURLcode postRes;
-
-		//Send message to Server
-		if((postRes = postServer(user, owner->pw_name, "open", (char *)path, &code)) == CURLE_OK)
-		{
-			CURLcode res = getServer(code, &answer);
-
-			if(res == CURLE_OPERATION_TIMEDOUT)
-			{
-				fprintf(stderr, "Permission denied! (timeout)\n");
-				return -errno;
-			}
-			else if(res == -1)
-			{
-				fprintf(stderr, "Failed to allocate memory. (getServer)\n");
-				return -errno;				
-			}
-			else if(res != CURLE_OK)
-			{
-				fprintf(stderr, "Permission denied! (Server disconnected)\n");
-				return -errno;
-			}
-		}
-		else
-		{
-			if(postRes == -1)
-				fprintf(stderr, "Failed to allocate memory. (postServer)\n");
-			else
-				fprintf(stderr, "Permission denied! (No server response)\n");
-			return -errno;
-		}
-	}
-
-	if(!strcmp(answer,"Denied"))
+	if(verifyAction(path, "open") < 0)
 		return -errno;
 
 	int res;
@@ -481,6 +516,9 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		    struct fuse_file_info *fi)
 {
+	if(verifyAction(path, "read") < 0)
+		return -errno;
+
 	int fd;
 	int res;
 
@@ -504,6 +542,9 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
+	if(verifyAction(path, "write") < 0)
+		return -errno;
+
 	int fd;
 	int res;
 
