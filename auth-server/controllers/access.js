@@ -1,7 +1,7 @@
 var Access = require('../models/acess')
 
 module.exports.insert = a => {
-    var novo = new Acess(a)
+    var novo = new Access(a)
     return novo.save()
 }
 
@@ -13,7 +13,7 @@ module.exports.list = () => {
 
 module.exports.check = id => {
     return Access
-        .findOne({code: id})
+        .findOne({consult_code: id})
         .exec()
 }
 

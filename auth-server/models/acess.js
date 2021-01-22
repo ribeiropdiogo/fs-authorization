@@ -6,6 +6,7 @@ var acessSchema = new mongoose.Schema({
     operation: String,
     target: String,
     code: String,
+    consult_code: String,
     authorized: Boolean
   });
 

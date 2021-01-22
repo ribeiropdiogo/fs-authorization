@@ -35,6 +35,7 @@ router.post('/access', function(req, res, next) {
 
   req.body.code = codes[Math.floor(Math.random() * 10000)];
   var consult_code = codes[Math.floor(Math.random() * 10000)];
+  req.body.consult_code = consult_code;
   req.body.authorized = false;
   
   var mailOptions = {
