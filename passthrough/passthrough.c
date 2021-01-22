@@ -200,10 +200,10 @@ int verifyAction(const char *path, char *operation)
     stat(path, &sb);
     struct passwd *owner = getpwuid(sb.st_uid);
 
-	FILE * fp;
-    fp = fopen("/home/lpbf/Desktop/TP3/logs.txt", "a");
-    fprintf(fp, "User %5i:%8s tring to open %20s from user %6i:%8s\n", userId, user, path, owner->pw_uid, owner->pw_name);
-	fclose(fp);
+	//FILE * fp;
+    //fp = fopen("/home/lpbf/Desktop/TP3/logs.txt", "a");
+    //fprintf(fp, "User %5i:%8s tring to open %20s from user %6i:%8s\n", userId, user, path, owner->pw_uid, owner->pw_name);
+	//fclose(fp);
     
 	char *answer = NULL;
 
@@ -216,24 +216,40 @@ int verifyAction(const char *path, char *operation)
 		//Send message to Server
 		if((postRes = postServer(user, owner->pw_name, operation, (char *)path, &code)) == CURLE_OK)
 		{
+			time_t initial = time(NULL);
+    
+			while((time(NULL)-initial) < 60 )
+			{
+				CURLcode getRes = getServer(code, &answer);
 
-			CURLcode getRes = getServer(code, &answer);
+				if(getRes == CURLE_OPERATION_TIMEDOUT)
+				{
+					fprintf(stderr, "Permission denied! (timeout)\n");
+					return -1;
+				}
+				else if(getRes == -1)
+				{
+					fprintf(stderr, "Failed to allocate memory. (getServer)\n");
+					return -2;				
+				}
+				else if(getRes != CURLE_OK)
+				{
+					fprintf(stderr, "Permission denied! (Server disconnected)\n");
+					return -3;
+				}
 
-			if(getRes == CURLE_OPERATION_TIMEDOUT)
-			{
-				fprintf(stderr, "Permission denied! (timeout)\n");
-				return -1;
+				if(strcmp(answer,"true")==0)
+				{
+					return 1;
+				}
+				 sleep(5);
 			}
-			else if(getRes == -1)
-			{
-				fprintf(stderr, "Failed to allocate memory. (getServer)\n");
-				return -2;				
-			}
-			else if(getRes != CURLE_OK)
-			{
-				fprintf(stderr, "Permission denied! (Server disconnected)\n");
-				return -3;
-			}
+
+				if(strcmp(answer,"false")==0)
+				{
+				 	free(answer);
+					return -5;
+				}
 
 		}
 		else
@@ -245,11 +261,7 @@ int verifyAction(const char *path, char *operation)
 			return -4;
 		}
 	}
-	if(!strcmp(answer,"false"))
-	{
-		free(answer);
-		return -5;
-	}
+	
 		
 	
 	free(answer);
