@@ -35,7 +35,7 @@ The POST requests of this API need to have the following structure:
 
 ### Configuration file
 
-The authorization server has an configuration file containing the username and respective email. This file is protected with superuser priviliges in order to prevent unwanted access, and has the following structure:
+The authorization server has an configuration file containing the username and respective email. This file is protected with superuser privileges in order to prevent unwanted access, and has the following structure:
 
 ```javascript
 var config = {};
