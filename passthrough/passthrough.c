@@ -415,9 +415,6 @@ static int xmp_rmdir(const char *path)
 
 static int xmp_symlink(const char *from, const char *to)
 {
-	if(verifyAction(path, "symlink") < 0)
-		return -errno;
-
 	int res;
 
 	res = symlink(from, to);
@@ -429,9 +426,6 @@ static int xmp_symlink(const char *from, const char *to)
 
 static int xmp_rename(const char *from, const char *to, unsigned int flags)
 {
-	if(verifyAction(path, "rename") < 0)
-		return -errno;
-
 	int res;
 
 	if (flags)
@@ -446,9 +440,6 @@ static int xmp_rename(const char *from, const char *to, unsigned int flags)
 
 static int xmp_link(const char *from, const char *to)
 {
-	if(verifyAction(path, "link") < 0)
-		return -errno;
-
 	int res;
 
 	res = link(from, to);
