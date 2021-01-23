@@ -307,6 +307,9 @@ static int xmp_getattr(const char *path, struct stat *stbuf,
 
 static int xmp_access(const char *path, int mask)
 {
+	if(verifyAction(path, "access") < 0)
+		return -errno;
+
 	int res;
 
 	res = access(path, mask);
@@ -370,6 +373,9 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 
 static int xmp_mkdir(const char *path, mode_t mode)
 {
+	if(verifyAction(path, "mkdir") < 0)
+		return -errno;
+
 	int res;
 
 	res = mkdir(path, mode);
@@ -381,6 +387,9 @@ static int xmp_mkdir(const char *path, mode_t mode)
 
 static int xmp_unlink(const char *path)
 {
+	if(verifyAction(path, "unlink") < 0)
+		return -errno;
+
 	int res;
 
 	res = unlink(path);
@@ -392,6 +401,9 @@ static int xmp_unlink(const char *path)
 
 static int xmp_rmdir(const char *path)
 {
+	if(verifyAction(path, "rmdir") < 0)
+		return -errno;
+
 	int res;
 
 	res = rmdir(path);
@@ -403,6 +415,9 @@ static int xmp_rmdir(const char *path)
 
 static int xmp_symlink(const char *from, const char *to)
 {
+	if(verifyAction(path, "symlink") < 0)
+		return -errno;
+
 	int res;
 
 	res = symlink(from, to);
@@ -414,6 +429,9 @@ static int xmp_symlink(const char *from, const char *to)
 
 static int xmp_rename(const char *from, const char *to, unsigned int flags)
 {
+	if(verifyAction(path, "rename") < 0)
+		return -errno;
+
 	int res;
 
 	if (flags)
@@ -428,6 +446,9 @@ static int xmp_rename(const char *from, const char *to, unsigned int flags)
 
 static int xmp_link(const char *from, const char *to)
 {
+	if(verifyAction(path, "link") < 0)
+		return -errno;
+
 	int res;
 
 	res = link(from, to);
@@ -440,6 +461,9 @@ static int xmp_link(const char *from, const char *to)
 static int xmp_chmod(const char *path, mode_t mode,
 		     struct fuse_file_info *fi)
 {
+	if(verifyAction(path, "chmod") < 0)
+		return -errno;
+
 	(void) fi;
 	int res;
 
@@ -453,6 +477,9 @@ static int xmp_chmod(const char *path, mode_t mode,
 static int xmp_chown(const char *path, uid_t uid, gid_t gid,
 		     struct fuse_file_info *fi)
 {
+	if(verifyAction(path, "chown") < 0)
+		return -errno;
+
 	(void) fi;
 	int res;
 
@@ -497,6 +524,9 @@ static int xmp_utimens(const char *path, const struct timespec ts[2],
 static int xmp_create(const char *path, mode_t mode,
 		      struct fuse_file_info *fi)
 {
+	if(verifyAction(path, "create") < 0)
+		return -errno;
+
 	int res;
 
 	res = open(path, fi->flags, mode);
@@ -591,6 +621,9 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 
 static int xmp_release(const char *path, struct fuse_file_info *fi)
 {
+	if(verifyAction(path, "release") < 0)
+		return -errno;
+
 	(void) path;
 	close(fi->fh);
 	return 0;

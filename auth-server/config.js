@@ -9,3 +9,4 @@ users.set('root', {email: "nike@sapo.pt"})
 config.users = users;
 
 module.exports = config;
+
