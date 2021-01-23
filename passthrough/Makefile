@@ -6,7 +6,6 @@ PKGFLAGS = `pkg-config fuse3 --cflags --libs ` -D_FILE_OFFSET_BITS=64
 DIR = ./
 TARGET = passthrough
 MOUNT = $(DIR)filesystem
-ACT = $(DIR)actualdir
 
 all: compile run
 
@@ -17,14 +16,11 @@ compile:
 
 run:
 	mkdir -p $(MOUNT)
-	mkdir -p $(ACT)
-	sudo ./$(TARGET) -o allow_other,modules=subdir,subdir=$(ACT) $(MOUNT) 
+	./$(TARGET) $(MOUNT) -o allow_other
 
 umount:
-	sudo umount $(MOUNT)
+	umount $(MOUNT)
 
 clean:
 	rm -rf $(MOUNT)
-	rm -rf $(ACT)
 	rm $(TARGET)
-
