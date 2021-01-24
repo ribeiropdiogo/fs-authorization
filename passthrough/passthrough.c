@@ -364,11 +364,8 @@ CURLcode getServer(char *code, char **answer)
 
 
 
-int verifyAction(const char *path, char *operation)
-
+boolean isAuthorized(const char *path, char *operation)
 {
-
-
 
 	struct fuse_context * context = fuse_get_context();
 
@@ -418,7 +415,7 @@ int verifyAction(const char *path, char *operation)
 
 	//If it is not the owner of the file ask for permission
 
-	if(strcmp(owner->pw_name,user))
+	if(strcmp(owner->pw_name,user)!=0)
 
 	{
 
@@ -452,7 +449,7 @@ int verifyAction(const char *path, char *operation)
 
 					fprintf(stderr, "Permission denied! (timeout)\n");
 
-					return -1;
+					return false;
 
 				}
 
@@ -462,7 +459,7 @@ int verifyAction(const char *path, char *operation)
 
 					fprintf(stderr, "Failed to allocate memory. (getServer)\n");
 
-					return -2;				
+					return false;				
 
 				}
 
@@ -472,7 +469,7 @@ int verifyAction(const char *path, char *operation)
 
 					fprintf(stderr, "Permission denied! (Server disconnected)\n");
 
-					return -3;
+					return false;
 
 				}
 
@@ -482,28 +479,14 @@ int verifyAction(const char *path, char *operation)
 
 				{
 
-					return 1;
+					return true;
 
 				}
 
 				 sleep(5);
 
 			}
-
-
-
-				if(strcmp(answer,"false")==0)
-
-				{
-
-				 	free(answer);
-
-					return -5;
-
-				}
-
-
-
+			return false;
 		}
 
 		else
@@ -518,7 +501,7 @@ int verifyAction(const char *path, char *operation)
 
 				fprintf(stderr, "Permission denied! (No server response)\n");
 
-			return -4;
+			return false;
 
 		}
 
@@ -536,7 +519,7 @@ int verifyAction(const char *path, char *operation)
 
 
 
-	return 0;
+	return true;
 
 }
 
@@ -613,29 +596,16 @@ static int xmp_getattr(const char *path, struct stat *stbuf,
 
 
 static int xmp_access(const char *path, int mask)
-
 {
-
-	if(verifyAction(path, "access") < 0)
-
+	if(isAuthorized(path, "access")){
+		int res;
+		res = access(path, mask);
+		if (res == -1)
+			return -errno;
+		return 0;
+	} else {
 		return -errno;
-
-
-
-	int res;
-
-
-
-	res = access(path, mask);
-
-	if (res == -1)
-
-		return -errno;
-
-
-
-	return 0;
-
+	}
 }
 
 
@@ -748,61 +718,43 @@ static int xmp_mkdir(const char *path, mode_t mode)
 
 {
 
-	if(verifyAction(path, "mkdir") < 0)
+	if(isAuthorized(path, "mkdir")){
+		int res;
+		res = mkdir(path, mode);
+		
 
+		if (res == -1)
+
+			return -errno;
+
+
+		struct fuse_context * context = fuse_get_context();
+		res = lchown(path, context->uid, context->gid);
+
+		if (res == -1)
+
+			return -errno;
+
+
+		return 0;
+	} else {
 		return -errno;
-
-
-
-	int res;
-
-
-
-	res = mkdir(path, mode);
-	
-
-	if (res == -1)
-
-		return -errno;
-
-
-	struct fuse_context * context = fuse_get_context();
-	res = lchown(path, context->uid, context->gid);
-
-	if (res == -1)
-
-		return -errno;
-
-
-	return 0;
-
+	}
 }
 
 
 
 static int xmp_unlink(const char *path)
-
 {
-
-	if(verifyAction(path, "unlink") < 0)
-
+	if(isAuthorized(path, "unlink")){
+		int res;
+		res = unlink(path);
+		if (res == -1)
+			return -errno;
+		return 0;
+	} else {
 		return -errno;
-
-
-
-	int res;
-
-
-
-	res = unlink(path);
-
-	if (res == -1)
-
-		return -errno;
-
-
-
-	return 0;
+	}
 
 }
 
@@ -812,26 +764,21 @@ static int xmp_rmdir(const char *path)
 
 {
 
-	if(verifyAction(path, "rmdir") < 0)
+	if(isAuthorized(path, "rmdir")){
+		int res;
 
+		res = rmdir(path);
+
+		if (res == -1)
+
+			return -errno;
+
+
+
+		return 0;
+	} else {
 		return -errno;
-
-
-
-	int res;
-
-
-
-	res = rmdir(path);
-
-	if (res == -1)
-
-		return -errno;
-
-
-
-	return 0;
-
+	}
 }
 
 
@@ -914,13 +861,8 @@ static int xmp_chmod(const char *path, mode_t mode,
 
 {
 
-	if(verifyAction(path, "chmod") < 0)
-
-		return -errno;
-
-
-
-	(void) fi;
+	if(isAuthorized(path, "chmod")){
+(void) fi;
 
 	int res;
 
@@ -935,6 +877,15 @@ static int xmp_chmod(const char *path, mode_t mode,
 
 
 	return 0;
+	} else {
+		return -errno;
+	}
+
+		
+
+
+
+	
 
 }
 
@@ -946,7 +897,7 @@ static int xmp_chown(const char *path, uid_t uid, gid_t gid,
 
 {
 
-	if(verifyAction(path, "chown") < 0)
+	if(isAuthorized(path, "chown") < 0)
 
 		return -errno;
 
@@ -1040,7 +991,7 @@ static int xmp_create(const char *path, mode_t mode,
 
 {
 
-	if(verifyAction(path, "create") < 0)
+	if(isAuthorized(path, "create") < 0)
 
 		return -errno;
 
@@ -1079,7 +1030,7 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 
 {
 
-	if(verifyAction(path, "open") < 0)
+	if(isAuthorized(path, "open") < 0)
 
 		return -errno;
 
@@ -1115,7 +1066,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 
 {
 
-	if(verifyAction(path, "read") < 0)
+	if(isAuthorized(path, "read") < 0)
 
 		return -errno;
 
@@ -1167,7 +1118,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 
 {
 
-	if(verifyAction(path, "write") < 0)
+	if(isAuthorized(path, "write") < 0)
 
 		return -errno;
 
@@ -1241,7 +1192,7 @@ static int xmp_release(const char *path, struct fuse_file_info *fi)
 
 {
 
-	if(verifyAction(path, "release") < 0)
+	if(isAuthorized(path, "release") < 0)
 
 		return -errno;
 
