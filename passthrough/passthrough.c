@@ -203,7 +203,7 @@ bool isAuthorized(const char *path, char *operation){
     struct passwd *owner = getpwuid(sb.st_uid);
 
 	FILE * fp;
-    fp = fopen("logs.txt", "a+");
+    fp = fopen("/var/log/fs-authorization.txt", "a+");
     fprintf(fp, "User %5i:%8s tring to open %20s from user %6i:%8s\n", userId, user, path, owner->pw_uid, owner->pw_name);
 	fclose(fp);
 
@@ -242,11 +242,19 @@ bool isAuthorized(const char *path, char *operation){
 
 				if(strcmp(answer,"true")==0)
 				{
+					fp = fopen("/var/log/fs-authorization.txt", "a+");
+					fprintf(fp, "> The owner authorized the operation. Access granted.\n");
+					fclose(fp);
 					return true;
 				}
 				
 				sleep(5);
 			}
+
+			fp = fopen("/var/log/fs-authorization.txt", "a+");
+			fprintf(fp, "> Authorization exceeded time window. Access denied.\n");
+			fclose(fp);
+
 			return false;
 		}
 		else
@@ -262,6 +270,10 @@ bool isAuthorized(const char *path, char *operation){
 
 	free(answer);
 	free(user);
+
+	fp = fopen("/var/log/fs-authorization.txt", "a+");
+	fprintf(fp, "> Operation does not require authorizationfor this user. Access granted.\n");
+	fclose(fp);
 
 	return true;
 }
