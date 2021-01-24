@@ -48,6 +48,7 @@
 #include <curl/curl.h>
 #include <stdlib.h>
 #include <time.h>
+#include <stdbool.h>
 
 #ifdef __FreeBSD__
 #include <sys/socket.h>
@@ -94,7 +95,7 @@ size_t write_data(void *ptr, size_t size, size_t nmemb, struct url_data *data) {
 }
 
 
-CURLcode postServer(char *user, char *owner, char *operation, char *target, char **code){
+CURLcode sendRequest(char *user, char *owner, char *operation, char *target, char **code){
 
     struct url_data data;
     data.size = 0;
@@ -138,7 +139,7 @@ CURLcode postServer(char *user, char *owner, char *operation, char *target, char
 }
 
 
-CURLcode getServer(char *code, char **answer){	
+CURLcode checkStatus(char *code, char **answer){	
 
 	struct url_data data;
     data.size = 0;
@@ -181,7 +182,7 @@ CURLcode getServer(char *code, char **answer){
 }
 
 
-boolean isAuthorized(const char *path, char *operation){
+bool isAuthorized(const char *path, char *operation){
 
 	struct fuse_context * context = fuse_get_context();
 	unsigned int userId = context->uid;
@@ -201,10 +202,10 @@ boolean isAuthorized(const char *path, char *operation){
 
     struct passwd *owner = getpwuid(sb.st_uid);
 
-	//FILE * fp;
-    //fp = fopen("/home/lpbf/Desktop/TP3/passthrough/logs.txt", "a");
-    //fprintf(fp, "User %5i:%8s tring to open %20s from user %6i:%8s\n", userId, user, path, owner->pw_uid, owner->pw_name);
-	//fclose(fp);
+	FILE * fp;
+    fp = fopen("logs.txt", "a+");
+    fprintf(fp, "User %5i:%8s tring to open %20s from user %6i:%8s\n", userId, user, path, owner->pw_uid, owner->pw_name);
+	fclose(fp);
 
 	char *answer = NULL;
 
@@ -215,13 +216,13 @@ boolean isAuthorized(const char *path, char *operation){
 		CURLcode postRes;
 
 		//Send message to Server
-		if((postRes = postServer(user, owner->pw_name, operation, (char *)path, &code)) == CURLE_OK)
+		if((postRes = sendRequest(user, owner->pw_name, operation, (char *)path, &code)) == CURLE_OK)
 		{
 			time_t initial = time(NULL);
 
-			while((time(NULL)-initial) < 60 )
+			while((time(NULL)-initial) < 30 )
 			{
-				CURLcode getRes = getServer(code, &answer);
+				CURLcode getRes = checkStatus(code, &answer);
 
 				if(getRes == CURLE_OPERATION_TIMEDOUT)
 				{
@@ -230,7 +231,7 @@ boolean isAuthorized(const char *path, char *operation){
 				} 
 				else if(getRes == -1)
 				{
-					fprintf(stderr, "Failed to allocate memory. (getServer)\n");
+					fprintf(stderr, "Failed to allocate memory. (checkStatus)\n");
 					return false;				
 				}
 				else if(getRes != CURLE_OK)
@@ -251,7 +252,7 @@ boolean isAuthorized(const char *path, char *operation){
 		else
 		{
 			if(postRes == -1)
-				fprintf(stderr, "Failed to allocate memory. (postServer)\n");
+				fprintf(stderr, "Failed to allocate memory. (sendRequest)\n");
 			else
 				fprintf(stderr, "Permission denied! (No server response)\n");
 
@@ -307,8 +308,10 @@ static int xmp_access(const char *path, int mask){
 		res = access(path, mask);
 		if (res == -1)
 			return -errno;
+		fprintf(stderr, "Access granted!\n");
 		return 0;
 	} else {
+		fprintf(stderr, "Access denied!\n");
 		return -errno;
 	}
 }
@@ -652,15 +655,11 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf){
 
 static int xmp_release(const char *path, struct fuse_file_info *fi){
 
-	if(isAuthorized(path, "release")){
-		(void) path;
+	(void) path;
 
-		close(fi->fh);
+	close(fi->fh);
 
-		return 0;
-	} else {
-		return -errno;
-	}
+	return 0;
 }
 
 
