@@ -68,15 +68,24 @@ router.post('/access', function(req, res, next) {
 });
 
 router.get('/access/:id', function(req, res, next) {
-  Access.check(req.params.id)
-    .then(d => res.status(200).send(d.authorized) )
-    .catch(e => res.status(500).jsonp({error: e}))
+  if(req.params.id.length < 10 && /^[a-zA-Z\d]+$/.test(req.params.id)){
+    Access.check(req.params.id)
+      .then(d => res.status(200).send(d.authorized) )
+      .catch(e => res.status(500).jsonp({error: e}))
+  } else {
+    res.status(406).send();
+  }
+  
 });
 
 router.post('/authorize', function(req, res, next) {
-  Access.authorize(req.body.code)
-    .then(d => res.status(200).redirect('/'))
-    .catch(e => res.status(500).jsonp({error: e}))
+  if(req.params.id.length < 10 && /^[a-zA-Z\d]+$/.test(req.params.id)){
+    Access.authorize(req.body.code)
+      .then(d => res.status(200).redirect('/'))
+      .catch(e => res.status(500).jsonp({error: e}))
+    } else {
+      res.status(406).send();
+    }
 });
 
 module.exports = router;
