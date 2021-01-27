@@ -19,7 +19,7 @@ run:
 	mkdir -p $(FS)
 	mkdir -p $(ACTUAL) 
 	$(info $(DIR))
-	sudo ./$(TARGET) -o allow_other,modules=subdir,subdir=$(ACTUAL) $(FS) 
+	sudo ./$(TARGET) -o allow_other,default_permissions,modules=subdir,subdir=$(ACTUAL) $(FS) 
 
 umount:
 	sudo umount $(FS)
