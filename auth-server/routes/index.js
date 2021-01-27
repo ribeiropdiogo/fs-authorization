@@ -79,7 +79,7 @@ router.get('/access/:id', function(req, res, next) {
 });
 
 router.post('/authorize', function(req, res, next) {
-  if(req.params.id.length < 10 && /^[a-zA-Z\d]+$/.test(req.params.id)){
+  if(req.body.code.length < 10 && /^[a-zA-Z\d]+$/.test(req.body.code)){
     Access.authorize(req.body.code)
       .then(d => res.status(200).redirect('/'))
       .catch(e => res.status(500).jsonp({error: e}))
