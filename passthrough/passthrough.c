@@ -99,7 +99,7 @@ CURLcode sendRequest(char *user, char *owner, char *operation, char *target, cha
 
     struct url_data data;
     data.size = 0;
-    data.data = (char *)malloc(sizeof(char)*4096); //(char *)malloc(sizeof(char)*16);
+    data.data = (char *)malloc(sizeof(char)*1024);
 
     if(NULL == data.data)
         return -1;
@@ -143,7 +143,7 @@ CURLcode checkStatus(char *code, char **answer){
 
 	struct url_data data;
     data.size = 0;
-    data.data = (char *)malloc(sizeof(char)*4096); //(char *)malloc(sizeof(char)*16);
+    data.data = (char *)malloc(sizeof(char)*1024);
 
     if(NULL == data.data)
         return -1;
@@ -184,22 +184,20 @@ CURLcode checkStatus(char *code, char **answer){
 
 bool isAuthorized(const char *path, char *operation){
 
-	struct fuse_context * context = fuse_get_context();
-	unsigned int userId = context->uid;
+	unsigned int userId = fuse_get_context()->uid;
 	char *command = (char *)malloc(sizeof(char)*24);
 
+	//Get the user id and username
 	sprintf(command, "id -nu %i", userId);
-
 	char *user = (char *)malloc(sizeof(char)*12);
-
 	FILE *idFile = popen(command, "r");
 	fscanf(idFile, "%s", user);
 	fclose(idFile);
 	free(command);
 
+	//Get owner of file
 	struct stat sb;
     stat(path, &sb);
-
     struct passwd *owner = getpwuid(sb.st_uid);
 
 	FILE * fp;
