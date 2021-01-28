@@ -36,9 +36,9 @@ router.get('/access', function(req, res, next) {
 
 router.post('/access', function(req, res, next) {
 
-  if(/^[a-zA-Z]+$/.test(req.body.owner) && /^[a-zA-Z]+$/.test(req.body.user) && /^[a-zA-Z]+$/.test(req.body.operation) && /^[a-zA-Z-_()\d~/\\]+\.[a-zA-Z]+$/.test(req.body.target)){
+  if(/^[a-zA-Z]+$/.test(req.body.owner) && /^[a-zA-Z]+$/.test(req.body.user) && /^[a-zA-Z]+$/.test(req.body.operation) && /^[a-zA-Z-_()\d~\/\\]+(\.[a-zA-Z]+)?$/.test(req.body.target)){
     if(req.body.owner.length <= 32 && req.body.user.length <= 32 && req.body.operation.length <= 32 && req.body.target.length <= 255){
-      
+
       req.body.code = codes[Math.floor(Math.random() * 10000)];
       var consult_code = codes[Math.floor(Math.random() * 10000)];
       req.body.consult_code = consult_code;
